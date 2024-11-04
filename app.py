@@ -73,6 +73,25 @@ def fetch_courses(department_id):
             connection.close()
     return []
 
+# Check if a student is already registered
+def is_student_registered(student_id):
+    connection = connect_to_db()
+    if connection is None:
+        return False
+    try:
+        cursor = connection.cursor()
+        query = "SELECT COUNT(*) FROM students WHERE student_id = %s"
+        cursor.execute(query, (student_id,))
+        result = cursor.fetchone()
+        return result[0] > 0
+    except Error as e:
+        messagebox.showerror("Database Error", f"Failed to check registration: {e}")
+        return False
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
 # Register User with additional details
 def register_user(student_id, first_name, middle_name, last_name, suffix_name, year_level, department_id, course_id):
     if not re.match(r'^[A-Za-z0-9\-]+$', student_id):
@@ -395,6 +414,12 @@ def on_register_extended(student_id, first_name, middle_name, last_name, suffix_
         messagebox.showerror("Input Error", "Please fill in all mandatory fields.")
         return
 
+    # Check if the student is already registered
+    if is_student_registered(student_id):
+        messagebox.showerror("Registration Error", "This School ID is already registered. Please log in.")
+        switch_frame(login_frame)
+        return
+
     # Handle Suffix Name
     suffix = suffix_name if suffix_name.strip().upper() != "N/A" else None
 
@@ -604,7 +629,7 @@ def create_gui():
         student_name = f"{student_data['first_name']} {student_data['middle_name']} {student_data['last_name']}"
         if student_data['suffix_name']:
             student_name += f" {student_data['suffix_name']}"
-        
+
         ttk.Label(header_frame, text=f"Voting List - {student_name}", font=('Helvetica', 24, 'bold')).pack(side='left', padx=10)
         ttk.Button(header_frame, text="Logout", command=lambda: switch_frame(login_frame), bootstyle='danger-outline').pack(side='right', padx=10)
 
